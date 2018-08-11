@@ -1,9 +1,9 @@
 var express = require('express');
-var app = express(); 
+var app = express();
 var request = require('request');
 var arrayConectados = {}//[]
 
-const URL_DJANGO =  'http://omaralex.pythonanywhere.com'//'http://127.0.0.1:8000'
+const URL_DJANGO = 'http://omaralex.pythonanywhere.com'//'http://127.0.0.1:8000'
 
 //Listen Server
 
@@ -13,100 +13,110 @@ var server = app.listen(port, function (err) {
 	console.log('Escuchando en el puerto 3000');
 })
 var io = require('socket.io')(server);
+function IdSocket(id_usuario) {
+	return arrayConectados[id_usuario]
+}
 io.sockets.on('connection', function (socket) {
 	//console.log(io.sockets.connected[socket.id].emit("prueba",{}))
 	console.log(socket.id)
-	io.sockets.emit("prueba",{dato:"prueba"})
+	io.sockets.emit("prueba", { dato: "prueba" })
 
-	socket.on('online',function(idUsuario){
+	socket.on('online', function (idUsuario) {
 		/*arrayConectados.push({
 			idUsuario:socket.id
 		})*/
 		console.log(idUsuario)
-		arrayConectados[idUsuario]=socket.id
+		arrayConectados[idUsuario] = socket.id
 	})
 
-	socket.on('status_writing',function(data){ 
-		io.sockets.connected[arrayConectados[data.id_r]].emit('status_writing',{id_e:data.id_e,estado:data.estado})
+	socket.on('status_writing', function (data) {
+		let id_socket = IdSocket(data.id_r)
+		if (id_socket)
+			io.sockets.connected[id_socket].emit('status_writing', { id_e: data.id_e, estado: data.estado })
 	})
 
-	socket.on('new_message',function(data){
+	socket.on('new_message', function (data) {
 		request.post(
-				URL_DJANGO + '/ws/send_message',
-				{ 
-					json: {  
-						id_mensaje : data.id_mensaje,
-						mensaje : data.mensaje,
-						tipo_mensaje : data.tipo_mensaje,
-						timestamp : data.timestamp,
-						estado_mensaje : data.estado_mensaje,
-						id_e : data.id_e,
-						id_r : data.id_r,
-						id_g : data.id_g
-					} 
-				},
-				function (error, response, body) {
-					console.log("begin send connected")
-					console.log(data)
-					console.log(arrayConectados) 
-					var dataResponse = {}
-					dataResponse['id_mensaje'] = body.data
-					dataResponse['estado_mensaje'] = 'enviado'
-					dataResponse['id_r'] = data.id_r
-
-					//----- confirmacion al emisor
-					io.sockets.connected[arrayConectados[data.id_e]].emit('status_message',dataResponse)
-					//----- envio mensaje receptor
-					io.sockets.connected[arrayConectados[data.id_r]].emit('new_message',data)
-					console.log("end send connected") 
-					 
+			URL_DJANGO + '/ws/send_message',
+			{
+				json: {
+					id_mensaje: data.id_mensaje,
+					mensaje: data.mensaje,
+					tipo_mensaje: data.tipo_mensaje,
+					timestamp: data.timestamp,
+					estado_mensaje: data.estado_mensaje,
+					id_e: data.id_e,
+					id_r: data.id_r,
+					id_g: data.id_g
 				}
-		);
-	})
-
-	socket.on('status_message',function(data){
-		request.post(
-				URL_DJANGO + '/ws/update_status_message',
-				{ 
-					json: {  
-						id_mensaje : data.id_mensaje,
-						estado_mensaje : data.estado_mensaje,
-					} 
-				},
-				function (error, response, body) {
-					 
-						console.log("status"+arrayConectados) 
-						var dataResponse = {}
-						dataResponse['id_mensaje'] = body.data.id_mensaje
-						dataResponse['estado_mensaje'] = data.estado_mensaje//+'_receptor'
-
-						//----- confirmacion al emisor
-						io.sockets.connected[arrayConectados[body.data.id_e]].emit('status_message',dataResponse)
-						//----- envio mensaje receptor
-						//io.sockets.connected[arrayConectados[data.id_r]].emit('s',data)
- 
-					
-				}
-		);
-	})
-
-	socket.on('get_all_message', function(data){
-		console.log(data)
-	 
-		 
-		request.post(
-			URL_DJANGO + '/ws/get_all_message',
-			{ 
-				json: { 
-					id_usuario: data.id_usuario 
-				} 
 			},
 			function (error, response, body) {
-				socket.emit('get_all_message',body)
+				console.log("begin send connected")
+				console.log(data)
+				console.log(arrayConectados)
+				var dataResponse = {}
+				dataResponse['id_mensaje'] = body.data
+				dataResponse['estado_mensaje'] = 'enviado'
+				dataResponse['id_r'] = data.id_r
+				//----- confirmacion al emisor
+				let id_socket_e = IdSocket(data.id_e)
+				if (id_socket_e)
+					io.sockets.connected[id_socket_e].emit('status_message', dataResponse)
+				//----- envio mensaje receptor
+				let id_socket_r = IdSocket(data.id_r)
+				if (id_socket_r)
+					io.sockets.connected[id_socket_r].emit('new_message', data)
+				console.log("end send connected")
+
+			}
+		);
+	})
+
+	socket.on('status_message', function (data) {
+		request.post(
+			URL_DJANGO + '/ws/update_status_message',
+			{
+				json: {
+					id_mensaje: data.id_mensaje,
+					estado_mensaje: data.estado_mensaje,
+				}
+			},
+			function (error, response, body) {
+
+				console.log("status" + arrayConectados)
+				var dataResponse = {}
+				dataResponse['id_mensaje'] = body.data.id_mensaje
+				dataResponse['estado_mensaje'] = data.estado_mensaje//+'_receptor'
+
+				//----- confirmacion al emisor
+				let id_socket_e = IdSocket(body.data.id_e)
+				if (id_socket_e)
+					io.sockets.connected[id_socket_e].emit('status_message', dataResponse)
+				//----- envio mensaje receptor
+				//io.sockets.connected[arrayConectados[data.id_r]].emit('s',data)
+
+
+			}
+		);
+	})
+
+	socket.on('get_all_message', function (data) {
+		console.log(data)
+
+
+		request.post(
+			URL_DJANGO + '/ws/get_all_message',
+			{
+				json: {
+					id_usuario: data.id_usuario
+				}
+			},
+			function (error, response, body) {
+				socket.emit('get_all_message', body)
 				console.log(body)
 			}
 		);
- 
+
 		//res.send(returndata);
 
 
@@ -135,4 +145,4 @@ io.sockets.on('connection', function (socket) {
 		res.send(returndata);*/
 	});
 });
-  
+
