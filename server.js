@@ -7,7 +7,7 @@ const URL_DJANGO =  'http://127.0.0.1:8000'
 
 //Listen Server
 
-const port = process.env.port || 3000
+var port = process.env.PORT || 8080;
 var server = app.listen(port, function (err) {
 	if (err) return console.log('Hubo un error'), process.exit(1);
 	console.log('Escuchando en el puerto 3000');
