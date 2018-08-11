@@ -3,7 +3,7 @@ var app = express();
 var request = require('request');
 var arrayConectados = {}//[]
 
-const URL_DJANGO =  'http://127.0.0.1:8000'
+const URL_DJANGO =  'http://omaralex.pythonanywhere.com'//'http://127.0.0.1:8000'
 
 //Listen Server
 
