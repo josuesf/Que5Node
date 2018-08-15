@@ -1,7 +1,7 @@
 var express = require('express');
 var app = express();
 var request = require('request');
-var arrayConectados = {}//[]
+var arrayConectados = []
 
 const URL_DJANGO = 'http://omaralex.pythonanywhere.com'//'http://127.0.0.1:8000'
 
@@ -14,7 +14,11 @@ var server = app.listen(port, function (err) {
 })
 var io = require('socket.io')(server);
 function IdSocket(id_usuario) {
-	return arrayConectados[id_usuario]
+	//console.log(arrayConectados)
+	//console.log(arrayConectados.find(u => u.idUsuario == id_usuario))
+	let u = arrayConectados.find(u => u.idUsuario == id_usuario)
+
+	return u ? u.socketId : undefined
 }
 io.sockets.on('connection', function (socket) {
 	//console.log(io.sockets.connected[socket.id].emit("prueba",{}))
@@ -25,10 +29,27 @@ io.sockets.on('connection', function (socket) {
 		/*arrayConectados.push({
 			idUsuario:socket.id
 		})*/
-		console.log(idUsuario)
-		arrayConectados[idUsuario] = socket.id
+		console.log('SE CONECTO ' + idUsuario + ' con id ' + socket.id)
+		let usuario = {
+			idUsuario,
+			socketId: socket.id
+		}
+		// arrayConectados[idUsuario] = socket.id
+		if (IdSocket(idUsuario))
+			arrayConectados.filter(p => {
+				if (p.idUsuario == idUsuario) {
+					p.socketId = socket.id
+				}
+				return p
+			})
+		else
+			arrayConectados.push(usuario)
 	})
+	socket.on('disconnect', function () {
+		console.log('DISCONNECT ' + socket.id)
+		arrayConectados = arrayConectados.filter(u => u.socketId != socket.id)
 
+	});
 	socket.on('status_writing', function (data) {
 		let id_socket = IdSocket(data.id_r)
 		if (id_socket)
@@ -52,8 +73,8 @@ io.sockets.on('connection', function (socket) {
 			},
 			function (error, response, body) {
 				console.log("begin send connected")
-				console.log(data)
-				console.log(arrayConectados)
+				console.log(body.data)
+				//console.log(arrayConectados)
 				var dataResponse = {}
 				dataResponse['id_mensaje'] = body.data
 				dataResponse['estado_mensaje'] = 'enviado'
@@ -64,6 +85,7 @@ io.sockets.on('connection', function (socket) {
 					io.sockets.connected[id_socket_e].emit('status_message', dataResponse)
 				//----- envio mensaje receptor
 				let id_socket_r = IdSocket(data.id_r)
+				//console.log(id_socket_r)
 				if (id_socket_r)
 					io.sockets.connected[id_socket_r].emit('new_message', data)
 				console.log("end send connected")
