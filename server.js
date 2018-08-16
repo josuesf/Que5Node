@@ -20,6 +20,36 @@ function IdSocket(id_usuario) {
 
 	return u ? u.socketId : undefined
 }
+app.post('/ws/get_estado_usuario/', function (req, res) {
+  const campo = "saved." + req.body.id_usuario
+  if(IdSocket(req.body.id_usuario)){
+	res.json({respuesta:'ok',estado:'en linea'})
+  }else{
+	request.post(
+		URL_DJANGO + '/ws/get_last_connected',
+		{
+			json: {
+				usuario: req.body.id_usuario
+			}
+		},
+		function (error, response, body) {
+			console.log("ultima vez")
+			console.log(body.data)
+			res.json({respuesta:'ok',estado:body.data})
+		}
+	);
+  }
+  console.log(campo)
+  var posts = db.collection('posts')
+    .find({ [campo]: true })
+    .skip(10 * (req.body.page - 1)).limit(10)
+    .sort({ createdAt: -1 })
+    .toArray((err, posts) => {
+      // If there aren't any posts, then return.
+      if (err) return res.json({ res: "error", detail: err });
+      res.json({ res: "ok", posts });
+    });
+})
 io.sockets.on('connection', function (socket) {
 	//console.log(io.sockets.connected[socket.id].emit("prueba",{}))
 	console.log(socket.id)
@@ -100,22 +130,22 @@ io.sockets.on('connection', function (socket) {
 			{
 				json: {
 					id_mensaje: data.id_mensaje,
-					estado_mensaje: data.estado_mensaje,
+					estado_mensaje: (data.estado_mensaje=='visto')?'visto_fin':data.estado_mensaje,
 				}
 			},
 			function (error, response, body) {
 
-				console.log("status" + arrayConectados)
+				console.log(body)
 				var dataResponse = {}
 				dataResponse['id_mensaje'] = body.data.id_mensaje
-				dataResponse['estado_mensaje'] = data.estado_mensaje//+'_receptor'
+				dataResponse['estado_mensaje'] = (data.estado_mensaje=='visto')?'visto_fin':data.estado_mensaje
 
 				//----- confirmacion al emisor
 				let id_socket_e = IdSocket(body.data.id_e)
 				if (id_socket_e)
 					io.sockets.connected[id_socket_e].emit('status_message', dataResponse)
 				//----- envio mensaje receptor
-				//io.sockets.connected[arrayConectados[data.id_r]].emit('s',data)
+				io.sockets.connected[socket.id].emit('status_message',dataResponse)
 
 
 			}
