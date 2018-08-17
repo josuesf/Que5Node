@@ -121,12 +121,14 @@ io.sockets.on('connection', function (socket) {
 	})
 
 	socket.on('status_message', function (data) {
+		let estado = data.estado_mensaje
+		if(estado=='visto' && data)
 		request.post(
 			URL_DJANGO + '/ws/update_status_message',
 			{
 				json: {
 					id_mensaje: data.id_mensaje,
-					estado_mensaje: (data.estado_mensaje == 'visto') ? 'visto_fin' : data.estado_mensaje,
+					estado_mensaje: data.estado_mensaje,
 				}
 			},
 			function (error, response, body) {
@@ -134,7 +136,7 @@ io.sockets.on('connection', function (socket) {
 				console.log(body)
 				var dataResponse = {}
 				dataResponse['id_mensaje'] = body.data.id_mensaje
-				dataResponse['estado_mensaje'] = (data.estado_mensaje == 'visto') ? 'visto_fin' : data.estado_mensaje
+				dataResponse['estado_mensaje'] = data.estado_mensaje
 
 				//----- confirmacion al emisor
 				let id_socket_e = IdSocket(body.data.id_e)
