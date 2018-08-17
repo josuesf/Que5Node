@@ -106,9 +106,9 @@ io.sockets.on('connection', function (socket) {
 				dataResponse['estado_mensaje'] = 'enviado'
 				dataResponse['id_r'] = data.id_r
 				//----- confirmacion al emisor
-				let id_socket_e = IdSocket(data.id_e)
-				if (id_socket_e)
-					io.sockets.connected[id_socket_e].emit('status_message', dataResponse)
+				// let id_socket_e = IdSocket(data.id_e)
+				// if (id_socket_e)
+					io.sockets.connected[socket.id].emit('status_message', dataResponse)
 				//----- envio mensaje receptor
 				let id_socket_r = IdSocket(data.id_r)
 				//console.log(id_socket_r)
